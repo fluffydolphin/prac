@@ -14,8 +14,7 @@ async function send_login() {
 
 async function copy_key() {
     // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-    test = "niggertron11234";
-    invoke("get_room_key", { roomNumber: test });
+    invoke("get_room_key", {});
 }
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -32,4 +31,10 @@ window.addEventListener("DOMContentLoaded", () => {
     document
         .querySelector("#copy-key")
         .addEventListener("click", () => copy_key());
+});
+window.addEventListener("DOMContentLoaded", () => {
+    loginMsgEl = document.querySelector("#msg-content");
+    document
+        .querySelector("#send-msg")
+        .addEventListener("click", () => send_msg());
 });

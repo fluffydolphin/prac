@@ -8,6 +8,12 @@ use std::io::{Read, Write};
 use fernet;
 use tauri::Window;
 use clipboard::{ClipboardProvider, ClipboardContext};
+use lazy_static::lazy_static;
+use std::sync::Mutex;
+
+lazy_static! {
+    static ref ROOM_NUMBER: Mutex<Option<String>> = Mutex::new(None);
+}
 
 fn main() {
     tauri::Builder::default()
@@ -42,18 +48,42 @@ async fn send_login(window: Window, handle: tauri::AppHandle, ip: String, userna
           .title("Fluffy Chat")
           .build().unwrap();
         window.close().unwrap();
+        *ROOM_NUMBER.lock().unwrap() = Some(room_number.clone());
         return "success".to_string();
     } else if out_mesg == "already in" {
         return "This user is already logged in".to_string();
     } else if out_mesg == "failed" {
         return "Invalid username or password".to_string();
-    } else {
+    } else { 
         return "Unknown error".to_string();
     }
 }
-
 #[tauri::command]
-fn get_room_key(room_number: String) {
+fn get_room_key() {
+    let room_number = ROOM_NUMBER.lock().unwrap().clone().unwrap_or_default();
     let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
     ctx.set_contents(room_number).unwrap();
+}
+
+fn send_msg(msg: String) {
+
+}
+
+fn listen(window: Window, mut stream: TcpStream) {
+    let seperator: &str = "<sep>";
+    let key = fernet::Fernet::new("fXpsGp9mJFfNYCTtGeB2zpY9bzjPAoaC0Fkcc13COy4=").unwrap();
+    while true {
+
+        let mut buffer = [0; 1024];
+        let bytes = stream.read(&mut buffer).unwrap();
+        let out_msg = String::from_utf8(key.decrypt(&String::from_utf8_lossy(&buffer[..bytes])).unwrap()).unwrap();
+        let parts: Vec<&str> = out_msg.split(seperator).collect();
+        let output_user = parts[0];
+        let output = parts[1];
+        if output == "serverexit" {
+            drop(stream);
+            window.close().unwrap();
+            break;
+        }
+    }
 }

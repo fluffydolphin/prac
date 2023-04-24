@@ -1845,6 +1845,7 @@ version = "0.0.0"
 dependencies = [
  "clipboard",
  "fernet",
+ "lazy_static",
  "serde",
  "serde_json",
  "tauri",
