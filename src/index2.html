@@ -4,7 +4,7 @@
 <head>
     <title>Fluffy Chat</title>
     <link rel="stylesheet" type="text/css" href="styles2.css">
-    <script type="text/javascript" src="main.js"></script>
+    <script type="module" src="main2.js"></script>
 </head>
 
 <body>
@@ -15,11 +15,11 @@
                 <button id="copy-key" class="side" type="submit">Copy Room Key</button>
             </ul>
         </div>
-        <div class="chat-area">
-            <div class="messages"></div>
+        <div id="scroll-area" class="chat-area">
+            <div id="divmessages" class="messages"></div>
             <form>
                 <input id="msg-content" type="text" placeholder="Type your message here...">
-                <button id="send-msg" type="submit">Send</button>
+                <button id="send-msgz" type="button">Send</button>
             </form>
         </div>
     </div>

@@ -64,11 +64,32 @@ body {
     word-wrap: break-word;
 }
 
-.message.received {
+.messagereceived {
+    float: left;
+    clear: both;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    padding: 10px;
+    max-width: 70%;
+    word-wrap: break-word;
     background-color: #444444;
 }
 
-.message.sent {
+.messagereceived1 {
+    float: left;
+    clear: both;
+    padding: 5px;
+    word-wrap: break-word;
+}
+
+.messagesent {
+    float: right;
+    clear: both;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    padding: 10px;
+    max-width: 70%;
+    word-wrap: break-word;
     background-color: #1e90ff;
     align-self: flex-end;
 }
