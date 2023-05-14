@@ -7,7 +7,7 @@ let login_roomEl;
 let loginMsgEl;
 
 async function send_login() {
-    loginMsgEl.textContent = await invoke("send_login", { ip: login_ipEl.value, username: login_usernameEl.value, password: login_passwordEl.value, roomNumber: login_roomEl.value });
+    loginMsgEl.textContent = await invoke("send_login", { domainName: login_ipEl.value, username: login_usernameEl.value, password: login_passwordEl.value, roomNumber: login_roomEl.value });
 }
 
 window.addEventListener("DOMContentLoaded", () => {

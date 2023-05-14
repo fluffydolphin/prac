@@ -3,7 +3,7 @@
 use std::net::TcpStream;
 use std::io::{Read, Write};
 use std::process::exit;
-use std::thread;
+use std::{thread, time};
 use fernet;
 use tauri::Window;
 use lazy_static::lazy_static;
@@ -12,6 +12,9 @@ use chrono::prelude::*;
 use tauri::ClipboardManager;
 use tauri::{CustomMenuItem, SystemTray, SystemTrayMenu, SystemTrayEvent, SystemTrayMenuItem};
 use tauri::Manager;
+use std::net::ToSocketAddrs;
+use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
+use discord_rich_presence::activity::{Assets, Button, Timestamps};
 
 #[derive(Clone, serde::Serialize)]
 struct Payload {
@@ -28,9 +31,10 @@ lazy_static! {
 }
 
 fn main() {
+
     *WINAME.lock().unwrap() = Some("main".to_string());
-    let quit = CustomMenuItem::new("quit".to_string(), "Quit");
     let hide = CustomMenuItem::new("hide".to_string(), "Hide");
+    let quit = CustomMenuItem::new("quit".to_string(), "Quit");
     let tray_menu = SystemTrayMenu::new()
     .add_item(quit)
     .add_native_item(SystemTrayMenuItem::Separator)
@@ -66,13 +70,6 @@ fn main() {
             } => {
               println!("system tray received a right click");
             }
-            SystemTrayEvent::DoubleClick {
-              position: _,
-              size: _,
-              ..
-            } => {
-              println!("system tray received a double click");
-            }
             SystemTrayEvent::MenuItemClick { id, .. } => {
               match id.as_str() {
                 "quit" => {
@@ -95,9 +92,29 @@ fn main() {
 }
 
 #[tauri::command]
-async fn send_login(window: Window, handle: tauri::AppHandle, ip: String, username: String, password: String, room_number: String) -> String {
+async fn send_login(handle: tauri::AppHandle, domain_name: String, username: String, password: String, room_number: String) -> String {
+    let port = 430;
+
+    let mut addresses = match (domain_name, port).to_socket_addrs() {
+        Ok(addresses) => addresses,
+        Err(e) => {
+            return format!("Failed to connect to: {}", e);
+        }
+    };
+
+    let address = match addresses.next() {
+        Some(addr) => addr,
+        None => {
+            return "No addresses found for domain name".to_string();
+        }
+    };
+    let ip = match address.ip() {
+        std::net::IpAddr::V4(ipv4) => ipv4.to_string(),
+        std::net::IpAddr::V6(ipv6) => ipv6.to_string(),
+    };
     let seperator: &str = "<sep>";
     let key = fernet::Fernet::new("fXpsGp9mJFfNYCTtGeB2zpY9bzjPAoaC0Fkcc13COy4=").unwrap();
+  
     let address = format!("{}:430", ip);
     let mut stream = match TcpStream::connect(address) {
         Ok(stream) => stream,
@@ -112,6 +129,11 @@ async fn send_login(window: Window, handle: tauri::AppHandle, ip: String, userna
 
     drop(stream);
     if out_mesg == "successful" {
+        *ROOM_NUMBER.lock().unwrap() = Some(room_number.clone());
+        let _ = thread::spawn(move || {
+            discord_pres(room_number.clone());
+        });
+
         *WINAME.lock().unwrap() = Some("editor".to_string());
         let _ = tauri::WindowBuilder::new(
             &handle,
@@ -120,8 +142,8 @@ async fn send_login(window: Window, handle: tauri::AppHandle, ip: String, userna
           )
           .title("Fluffy Chat")
           .build().unwrap();
+        let window = handle.get_window("main").unwrap();
         window.close().unwrap();
-        *ROOM_NUMBER.lock().unwrap() = Some(room_number.clone());
         *USERNAME.lock().unwrap() = Some(username.clone());
         let stream = match TcpStream::connect(format!("{}:431", ip)) {
             Ok(stream) => {
@@ -133,7 +155,7 @@ async fn send_login(window: Window, handle: tauri::AppHandle, ip: String, userna
             }
         };
         let _ = thread::spawn(move || {
-            listens(window, stream);
+            listens(handle.get_window("editor").unwrap(), stream);
         });
         return "success".to_string();
     } else if out_mesg == "already in" {
@@ -196,4 +218,27 @@ fn win2exit() {
     let mut stream = REAL_STREAM.lock().unwrap().as_ref().unwrap().try_clone().unwrap();
     let _ = stream.write_all(key.encrypt(format!("{}{}{}", room_number, sepz, "/exit").as_bytes()).as_bytes());
     exit(0);
+}
+
+fn discord_pres(room_number: String) {
+    loop {
+        let mut buttons = Vec::new();
+    
+        let start_time = time::SystemTime::now()
+        .duration_since(time::UNIX_EPOCH)
+        .expect("Failed to get timestamp")
+        .as_millis() as i64;
+    
+        let mut client = DiscordIpcClient::new("1107278007820890112").expect("Could not connect to Discord client");
+        client.connect().expect("Could not connect to Discord client");
+    
+        buttons.push(Button::new("Github", "https://github.com/fluffydolphin/fluffy-chat"));
+    
+        let details = format!("Room: {}", room_number);
+    
+        let payload = activity::Activity::new().assets(Assets::new().large_image("fluffy-chat").large_text("Fluffy Chat")).buttons(buttons).details(details.as_str()).timestamps(Timestamps::new().start(start_time));
+        client.set_activity(payload).expect("Could not connect to Discord client");
+
+        thread::sleep(time::Duration::from_secs(15));
+    }
 }
