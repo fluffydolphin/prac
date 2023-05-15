@@ -131,7 +131,10 @@ async fn send_login(handle: tauri::AppHandle, domain_name: String, username: Str
     if out_mesg == "successful" {
         *ROOM_NUMBER.lock().unwrap() = Some(room_number.clone());
         let _ = thread::spawn(move || {
-            discord_pres(room_number.clone());
+            discord_pres(room_number.clone(),  time::SystemTime::now()
+            .duration_since(time::UNIX_EPOCH)
+            .expect("Failed to get timestamp")
+            .as_millis() as i64);
         });
 
         *WINAME.lock().unwrap() = Some("editor".to_string());
@@ -220,14 +223,10 @@ fn win2exit() {
     exit(0);
 }
 
-fn discord_pres(room_number: String) {
+fn discord_pres(room_number: String, start_time: i64) {
     loop {
         let mut buttons = Vec::new();
-    
-        let start_time = time::SystemTime::now()
-        .duration_since(time::UNIX_EPOCH)
-        .expect("Failed to get timestamp")
-        .as_millis() as i64;
+
     
         let mut client = DiscordIpcClient::new("1107278007820890112").expect("Could not connect to Discord client");
         client.connect().expect("Could not connect to Discord client");
@@ -239,6 +238,6 @@ fn discord_pres(room_number: String) {
         let payload = activity::Activity::new().assets(Assets::new().large_image("fluffy-chat").large_text("Fluffy Chat")).buttons(buttons).details(details.as_str()).timestamps(Timestamps::new().start(start_time));
         client.set_activity(payload).expect("Could not connect to Discord client");
 
-        thread::sleep(time::Duration::from_secs(15));
+        thread::sleep(time::Duration::from_millis(15));
     }
 }
